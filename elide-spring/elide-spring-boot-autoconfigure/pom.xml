@@ -149,6 +149,7 @@
             <version>${spring.boot.version}</version>
             <optional>true</optional>
         </dependency>
+
         <dependency>
             <groupId>org.mdkt.compiler</groupId>
             <artifactId>InMemoryJavaCompiler</artifactId>

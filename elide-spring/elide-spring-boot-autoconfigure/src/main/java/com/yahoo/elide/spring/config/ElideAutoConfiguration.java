@@ -10,6 +10,7 @@ import com.yahoo.elide.ElideSettingsBuilder;
 import com.yahoo.elide.Injector;
 import com.yahoo.elide.annotation.SecurityCheck;
 import com.yahoo.elide.audit.Slf4jLogger;
+import com.yahoo.elide.contrib.dynamicconfighelpers.compile.ElideDynamicEntityCompiler;
 import com.yahoo.elide.contrib.swagger.SwaggerBuilder;
 import com.yahoo.elide.core.DataStore;
 import com.yahoo.elide.core.EntityDictionary;
@@ -23,7 +24,6 @@ import com.yahoo.elide.datastores.aggregation.queryengines.sql.annotation.FromTa
 import com.yahoo.elide.datastores.jpa.JpaDataStore;
 import com.yahoo.elide.datastores.jpa.transaction.NonJtaTransaction;
 import com.yahoo.elide.datastores.multiplex.MultiplexManager;
-import com.yahoo.elide.spring.dynamic.compile.ElideDynamicEntityCompiler;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
@@ -36,9 +36,7 @@ import io.swagger.models.Info;
 import io.swagger.models.Swagger;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
 import javax.persistence.EntityManagerFactory;
@@ -126,7 +124,7 @@ public class ElideAutoConfiguration {
 
         if (settings.getDynamicConfig().isEnabled()) {
             ElideDynamicEntityCompiler compiler = dynamicCompiler.getIfAvailable();
-            Set<Class<?>> annotatedClass = findAnnotatedClasses(compiler, SecurityCheck.class);
+            Set<Class<?>> annotatedClass = compiler.findAnnotatedClasses(SecurityCheck.class);
             dictionary.addSecurityChecks(annotatedClass);
         }
 
@@ -147,13 +145,12 @@ public class ElideAutoConfiguration {
             ObjectProvider<ElideDynamicEntityCompiler> dynamicCompiler, ElideConfigProperties settings)
             throws ClassNotFoundException {
 
-        MetaDataStore metaDataStore = new MetaDataStore();
+        MetaDataStore metaDataStore = null;
 
         if (settings.getDynamicConfig().isEnabled()) {
-            ElideDynamicEntityCompiler compiler = dynamicCompiler.getIfAvailable();
-            Set<Class<?>> annotatedClass = findAnnotatedClasses(compiler, FromTable.class);
-            annotatedClass.addAll(findAnnotatedClasses(compiler, FromSubquery.class));
-            metaDataStore.populateEntityDictionary(annotatedClass);
+            metaDataStore = new MetaDataStore(dynamicCompiler.getIfAvailable());
+        } else {
+            metaDataStore = new MetaDataStore();
         }
 
         return new SQLQueryEngine(metaDataStore, entityManagerFactory);
@@ -177,8 +174,8 @@ public class ElideAutoConfiguration {
 
         if (settings.getDynamicConfig().isEnabled()) {
             ElideDynamicEntityCompiler compiler = dynamicCompiler.getIfAvailable();
-            Set<Class<?>> annotatedClass = findAnnotatedClasses(compiler, FromTable.class);
-            annotatedClass.addAll(findAnnotatedClasses(compiler, FromSubquery.class));
+            Set<Class<?>> annotatedClass = compiler.findAnnotatedClasses(FromTable.class);
+            annotatedClass.addAll(compiler.findAnnotatedClasses(FromSubquery.class));
             aggregationDataStore = new AggregationDataStore(queryEngine, annotatedClass);
         } else {
             aggregationDataStore = new AggregationDataStore(queryEngine);
@@ -191,29 +188,6 @@ public class ElideAutoConfiguration {
         // meta data store needs to be put at first to populate meta data models
         return new MultiplexManager(jpaDataStore, queryEngine.getMetaDataStore(), aggregationDataStore);
     }
-
-    /**
-     * Find classes with a particular annotation from dynamic compiler.
-     * @param compiler An instance of ElideDynamicEntityCompiler.
-     * @param annotationClass Annotation to search for.
-     * @return Set of Classes matching the annotation.
-     * @throws ClassNotFoundException
-     */
-    private Set<Class<?>> findAnnotatedClasses(ElideDynamicEntityCompiler compiler, Class annotationClass)
-            throws ClassNotFoundException {
-
-        Set<Class<?>> annotatedClasses = new HashSet<Class<?>>();
-        ArrayList<String> dynamicClasses = compiler.classNames;
-
-        for (String dynamicClass : dynamicClasses) {
-            Class<?> classz = compiler.getClassLoader().loadClass(dynamicClass);
-            if (classz.getAnnotation(annotationClass) != null) {
-                annotatedClasses.add(classz);
-            }
-        }
-
-        return annotatedClasses;
-}
 
     /**
      * Creates a singular swagger document for JSON-API.

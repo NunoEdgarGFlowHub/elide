@@ -5,10 +5,10 @@
  */
 package com.yahoo.elide.spring.config;
 
+import com.yahoo.elide.contrib.dynamicconfighelpers.compile.ElideDynamicEntityCompiler;
 import com.yahoo.elide.datastores.aggregation.queryengines.sql.annotation.FromSubquery;
 import com.yahoo.elide.datastores.aggregation.queryengines.sql.annotation.FromTable;
 import com.yahoo.elide.datastores.jpa.PersistenceUnitInfoImpl;
-import com.yahoo.elide.spring.dynamic.compile.ElideDynamicEntityCompiler;
 import com.yahoo.elide.utils.ClassScanner;
 
 import org.hibernate.cfg.AvailableSettings;

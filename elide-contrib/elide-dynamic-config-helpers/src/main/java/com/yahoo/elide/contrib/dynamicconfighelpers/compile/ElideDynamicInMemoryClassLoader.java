@@ -3,7 +3,7 @@
  * Licensed under the Apache License, Version 2.0
  * See LICENSE file in project root for terms.
  */
-package com.yahoo.elide.spring.dynamic.compile;
+package com.yahoo.elide.contrib.dynamicconfighelpers.compile;
 
 import com.google.common.collect.Sets;
 import lombok.AllArgsConstructor;
